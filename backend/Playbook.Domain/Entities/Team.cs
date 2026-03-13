@@ -8,4 +8,5 @@ public class Team
 
     public ICollection<Player> Players { get; set; } = new List<Player>();
     public ICollection<Game> Games { get; set; } = new List<Game>();
+    public ICollection<Roster> Rosters { get; set; } = new List<Roster>();
 }

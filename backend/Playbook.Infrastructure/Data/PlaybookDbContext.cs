@@ -9,6 +9,8 @@ public class PlaybookDbContext : DbContext
 
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<Player> Players => Set<Player>();
+    public DbSet<Roster> Rosters => Set<Roster>();
+    public DbSet<RosterPlayer> RosterPlayers => Set<RosterPlayer>();
     public DbSet<Game> Games => Set<Game>();
     public DbSet<Video> Videos => Set<Video>();
     public DbSet<Event> Events => Set<Event>();
@@ -30,11 +32,26 @@ public class PlaybookDbContext : DbContext
             e.HasOne(x => x.Team).WithMany(t => t.Players).HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<Roster>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.HasOne(x => x.Team).WithMany(t => t.Rosters).HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RosterPlayer>(e =>
+        {
+            e.HasKey(x => new { x.RosterId, x.PlayerId });
+            e.HasOne(x => x.Roster).WithMany(r => r.RosterPlayers).HasForeignKey(x => x.RosterId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Player).WithMany().HasForeignKey(x => x.PlayerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Game>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Opponent).HasMaxLength(200);
+            e.Property(x => x.Name).HasMaxLength(200);
             e.HasOne(x => x.Team).WithMany(t => t.Games).HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Roster).WithMany().HasForeignKey(x => x.RosterId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Video>(e =>

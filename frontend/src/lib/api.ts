@@ -42,7 +42,11 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    const message = text || `API error: ${res.status}`;
+    throw new Error(message);
+  }
   if (res.status === 204) return undefined as T;
   return res.json();
 }
@@ -60,6 +64,10 @@ export const api = {
     get: (id: string) => fetchApi<Player>(`/players/${id}`),
     create: (data: CreatePlayer) =>
       fetchApi<Player>("/players", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: { name: string; number?: number | null; position: string }) =>
+      fetchApi<Player>(`/players/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      fetchApi<void>(`/players/${id}`, { method: "DELETE" }),
   },
   games: {
     list: (teamId?: string) =>
@@ -74,6 +82,8 @@ export const api = {
       }),
     create: (data: CreateGame) =>
       fetchApi<Game>("/games", { method: "POST", body: JSON.stringify(data) }),
+    getPlayers: (gameId: string) =>
+      fetchApi<Player[]>(`/games/${gameId}/players`),
     events: (gameId: string) => fetchApi<Event[]>(`/games/${gameId}/events`),
     createEvent: (gameId: string, data: CreateEvent) =>
       fetchApi<Event>(`/games/${gameId}/events`, {
@@ -142,17 +152,42 @@ export const api = {
     delete: (id: string) =>
       fetchApi<void>(`/clips/${id}`, { method: "DELETE" }),
   },
+  rosters: {
+    list: (teamId?: string) =>
+      fetchApi<Roster[]>(`/rosters${teamId ? `?teamId=${teamId}` : ""}`),
+    get: (id: string) =>
+      fetchApi<RosterWithPlayers>(`/rosters/${id}`),
+    create: (data: { name: string; teamId: string }) =>
+      fetchApi<Roster>("/rosters", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: { name: string }) =>
+      fetchApi<Roster>(`/rosters/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    setPlayers: (id: string, playerIds: string[]) =>
+      fetchApi<RosterWithPlayers>(`/rosters/${id}/players`, {
+        method: "PUT",
+        body: JSON.stringify({ playerIds }),
+      }),
+    delete: (id: string) =>
+      fetchApi<void>(`/rosters/${id}`, { method: "DELETE" }),
+  },
   analytics: {
-    playsPerPlayer: (params?: { teamId?: string; playerId?: string }) => {
+    playsPerPlayer: (params?: { teamId?: string; playerId?: string; gameId?: string }) => {
       const q = new URLSearchParams();
       if (params?.teamId) q.set("teamId", params.teamId);
       if (params?.playerId) q.set("playerId", params.playerId);
+      if (params?.gameId) q.set("gameId", params.gameId);
       const query = q.toString();
       return fetchApi<PlaysPerPlayer[]>(`/analytics/plays-per-player${query ? `?${query}` : ""}`);
     },
     eventDistribution: (params?: { gameId?: string; teamId?: string }) => {
       const q = new URLSearchParams(params as Record<string, string>).toString();
       return fetchApi<EventDistribution[]>(`/analytics/event-distribution${q ? `?${q}` : ""}`);
+    },
+    playsPerRoster: (params?: { teamId?: string; gameId?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.teamId) q.set("teamId", params.teamId);
+      if (params?.gameId) q.set("gameId", params.gameId);
+      const query = q.toString();
+      return fetchApi<PlaysPerRoster[]>(`/analytics/plays-per-roster${query ? `?${query}` : ""}`);
     },
   },
 };
@@ -166,21 +201,33 @@ export interface Team {
 export interface Player {
   id: string;
   name: string;
-  number: number;
+  number?: number | null;
   position: string;
   teamId: string;
 }
 
 export interface Game {
   id: string;
-  opponent: string;
+  name: string;
   date: string;
   teamId: string;
+  rosterId?: string | null;
 }
 
 export interface GameWithVideo extends Game {
   videoUrl?: string;
   videoDuration?: number;
+}
+
+export interface Roster {
+  id: string;
+  name: string;
+  teamId: string;
+  createdAt: string;
+}
+
+export interface RosterWithPlayers extends Roster {
+  players: Player[];
 }
 
 export interface Event {
@@ -205,15 +252,16 @@ export interface Clip {
 
 export interface CreatePlayer {
   name: string;
-  number: number;
+  number?: number | null;
   position: string;
   teamId: string;
 }
 
 export interface CreateGame {
-  opponent: string;
+  name: string;
   date: string;
   teamId: string;
+  rosterId?: string | null;
 }
 
 export interface CreateEvent {
@@ -234,7 +282,7 @@ export interface CreateClip {
 export interface PlaysPerPlayer {
   playerId: string;
   playerName: string;
-  playerNumber: number;
+  playerNumber?: number | null;
   totalPlays: number;
   byType: { type: string; count: number }[];
 }
@@ -242,4 +290,11 @@ export interface PlaysPerPlayer {
 export interface EventDistribution {
   type: string;
   count: number;
+}
+
+export interface PlaysPerRoster {
+  rosterId: string;
+  rosterName: string;
+  totalPlays: number;
+  byType: { type: string; count: number }[];
 }

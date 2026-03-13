@@ -38,7 +38,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-slate-400 mt-1">Overview of your team&apos;s video analysis</p>
       </div>
 
@@ -86,7 +86,7 @@ export default function Dashboard() {
                 className="flex items-center justify-between p-4 hover:bg-turf-700 transition-colors"
               >
                 <div>
-                  <p className="font-medium text-white">vs {g.opponent}</p>
+                  <p className="font-medium text-white">{g.name}</p>
                   <p className="text-sm text-slate-500">
                     {new Date(g.date).toLocaleDateString()}
                   </p>

@@ -31,9 +31,10 @@ public class GamesController : ControllerBase
             .OrderByDescending(g => g.Date)
             .Select(g => new GameWithVideoDto(
                 g.Id,
-                g.Opponent,
+                g.Name,
                 g.Date,
                 g.TeamId,
+                g.RosterId,
                 g.Videos.OrderByDescending(v => v.Duration).Select(v => v.VideoUrl).FirstOrDefault(),
                 g.Videos.OrderByDescending(v => v.Duration).Select(v => (int?)v.Duration).FirstOrDefault()
             ))
@@ -50,7 +51,7 @@ public class GamesController : ControllerBase
         if (game == null) return NotFound();
 
         var video = game.Videos.OrderByDescending(v => v.Duration).FirstOrDefault();
-        return Ok(new GameWithVideoDto(game.Id, game.Opponent, game.Date, game.TeamId, video?.VideoUrl, video?.Duration));
+        return Ok(new GameWithVideoDto(game.Id, game.Name, game.Date, game.TeamId, game.RosterId, video?.VideoUrl, video?.Duration));
     }
 
     [HttpPost]
@@ -59,13 +60,30 @@ public class GamesController : ControllerBase
         var game = new Game
         {
             Id = Guid.NewGuid(),
-            Opponent = dto.Opponent,
+            Name = dto.Name,
             Date = dto.Date,
-            TeamId = dto.TeamId
+            TeamId = dto.TeamId,
+            RosterId = dto.RosterId
         };
         _db.Games.Add(game);
         await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetGame), new { id = game.Id }, new GameDto(game.Id, game.Opponent, game.Date, game.TeamId));
+        return CreatedAtAction(nameof(GetGame), new { id = game.Id }, new GameDto(game.Id, game.Name, game.Date, game.TeamId, game.RosterId));
+    }
+
+    [HttpGet("{id:guid}/players")]
+    public async Task<ActionResult<IEnumerable<PlayerDto>>> GetGamePlayers(Guid id)
+    {
+        var game = await _db.Games
+            .Include(g => g.Roster)
+            .ThenInclude(r => r!.RosterPlayers)
+            .ThenInclude(rp => rp.Player)
+            .FirstOrDefaultAsync(g => g.Id == id);
+        if (game == null) return NotFound();
+
+        var players = game.Roster != null
+            ? game.Roster.RosterPlayers.OrderBy(rp => rp.Player.Name).Select(rp => new PlayerDto(rp.Player.Id, rp.Player.Name, rp.Player.Number, rp.Player.Position, rp.Player.TeamId)).ToList()
+            : (await _db.Players.Where(p => p.TeamId == game.TeamId).OrderBy(p => p.Name).Select(p => new PlayerDto(p.Id, p.Name, p.Number, p.Position, p.TeamId)).ToListAsync());
+        return Ok(players);
     }
 
     [HttpGet("{id:guid}/events")]

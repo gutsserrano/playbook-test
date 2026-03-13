@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { formatTime } from "@/lib/formatTime";
+import { EVENT_TYPES } from "@/lib/constants";
+import { Modal } from "@/components/ui/Modal";
 
 interface AddEventModalProps {
-  players: { id: string; name: string; number: number }[];
+  players: { id: string; name: string; number?: number | null }[];
   currentTime: number;
   onClose: () => void;
   onSubmit: (data: { playerId?: string; type: string; notes?: string }) => void | Promise<void>;
 }
-
-const EVENT_TYPES = ["Goal", "Assist", "Save", "Penalty", "Foul", "Corner", "Other"];
 
 export function AddEventModal({
   players,
@@ -39,8 +39,7 @@ export function AddEventModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-turf-800 rounded-xl border border-turf-600 w-full max-w-md p-6 shadow-xl">
+    <Modal onClose={onClose}>
         <h3 className="text-xl font-semibold text-white mb-4">Add Event at {formatTime(currentTime)}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -53,7 +52,7 @@ export function AddEventModal({
               <option value="">— Select —</option>
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
-                  #{p.number} {p.name}
+                  {p.number != null ? `#${p.number} ` : ""}{p.name}
                 </option>
               ))}
             </select>
@@ -99,7 +98,6 @@ export function AddEventModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

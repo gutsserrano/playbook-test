@@ -13,6 +13,7 @@ import { AddEventModal } from "@/components/AddEventModal";
 import { CreateClipModal } from "@/components/CreateClipModal";
 import { EditEventModal } from "@/components/EditEventModal";
 import { EditClipModal } from "@/components/EditClipModal";
+import { Modal } from "@/components/ui/Modal";
 
 export default function GameAnalysisPage() {
   const params = useParams();
@@ -23,7 +24,7 @@ export default function GameAnalysisPage() {
   const [game, setGame] = useState<GameWithVideo | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
-  const [players, setPlayers] = useState<{ id: string; name: string; number: number }[]>([]);
+  const [players, setPlayers] = useState<{ id: string; name: string; number?: number | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -49,12 +50,11 @@ export default function GameAnalysisPage() {
     api.games.get(id).then((g) => {
       setGame(g);
       return Promise.all([
-        Promise.resolve(g),
         api.games.events(id),
         api.clips.list({ gameId: id }),
-        api.players.list(g.teamId),
+        api.games.getPlayers(id),
       ]);
-    }).then(([g, e, c, p]) => {
+    }).then(([e, c, p]) => {
       setEvents(e);
       setClips(c);
       setPlayers(p.map((x) => ({ id: x.id, name: x.name, number: x.number })));
@@ -256,9 +256,9 @@ export default function GameAnalysisPage() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">vs {game.opponent}</h1>
+          <h1 className="text-2xl font-bold text-white">{game.name}</h1>
           <p className="text-slate-400 text-sm">
             {new Date(game.date).toLocaleDateString()} • Game Analysis
           </p>
@@ -274,14 +274,10 @@ export default function GameAnalysisPage() {
       </div>
 
       {showDeleteGameModal && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          onClick={(e) => e.target === e.currentTarget && setShowDeleteGameModal(false)}
-        >
-          <div className="bg-turf-800 rounded-xl border border-turf-600 w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setShowDeleteGameModal(false)}>
             <h3 className="text-xl font-semibold text-white mb-3">Delete game?</h3>
             <p className="text-slate-400 text-sm mb-4">
-              This will permanently delete <strong className="text-white">vs {game.opponent}</strong> and all related information:
+              This will permanently delete <strong className="text-white">{game.name}</strong> and all related information:
             </p>
             <ul className="text-slate-400 text-sm space-y-1 mb-6 list-disc list-inside">
               <li>All events (goals, assists, saves, etc.)</li>
@@ -306,8 +302,7 @@ export default function GameAnalysisPage() {
                 {deletingGame ? "Deleting…" : "Delete game"}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       <div className="bg-turf-800 rounded-xl border border-turf-600 overflow-hidden">
@@ -348,7 +343,7 @@ export default function GameAnalysisPage() {
               )}
             </div>
 
-            <div className="p-4 border-t border-turf-600 flex flex-wrap gap-3 items-center">
+            <div className="p-4 border-t border-turf-600 flex flex-wrap gap-3 items-center justify-start">
               <div className="flex items-center gap-2">
                 {!isYoutube && (
                   <label className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors ${uploading ? "bg-turf-500 text-slate-400" : "bg-turf-600 text-white hover:bg-turf-500"}`}>

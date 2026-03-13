@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { formatTime, parseTime } from "@/lib/formatTime";
+import { Modal } from "@/components/ui/Modal";
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
 interface CreateClipModalProps {
-  players: { id: string; name: string; number: number }[];
+  players: { id: string; name: string; number?: number | null }[];
   currentTime: number;
   videoDuration: number;
   onClose: () => void;
@@ -58,11 +59,7 @@ export function CreateClipModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-      onClick={(e) => e.target === e.currentTarget && handleCancel()}
-    >
-      <div className="bg-turf-800 rounded-xl border border-turf-600 w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={handleCancel}>
         <h3 className="text-xl font-semibold text-white mb-4">Create Clip</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -139,7 +136,7 @@ export function CreateClipModal({
               <option value="">— Select —</option>
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
-                  #{p.number} {p.name}
+                  {p.number != null ? `#${p.number} ` : ""}{p.name}
                 </option>
               ))}
             </select>
@@ -162,7 +159,6 @@ export function CreateClipModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

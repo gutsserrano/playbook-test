@@ -94,15 +94,20 @@ namespace Playbook.Infrastructure.Migrations
                 b.Property<DateTime>("Date")
                     .HasColumnType("timestamp with time zone");
 
-                b.Property<string>("Opponent")
+                b.Property<string>("Name")
                     .IsRequired()
                     .HasMaxLength(200)
                     .HasColumnType("character varying(200)");
+
+                b.Property<Guid?>("RosterId")
+                    .HasColumnType("uuid");
 
                 b.Property<Guid>("TeamId")
                     .HasColumnType("uuid");
 
                 b.HasKey("Id");
+
+                b.HasIndex("RosterId");
 
                 b.HasIndex("TeamId");
 
@@ -120,7 +125,7 @@ namespace Playbook.Infrastructure.Migrations
                     .HasMaxLength(200)
                     .HasColumnType("character varying(200)");
 
-                b.Property<int>("Number")
+                b.Property<int?>("Number")
                     .HasColumnType("integer");
 
                 b.Property<string>("Position")
@@ -136,6 +141,45 @@ namespace Playbook.Infrastructure.Migrations
                 b.HasIndex("TeamId");
 
                 b.ToTable("Players");
+            });
+
+            modelBuilder.Entity("Playbook.Domain.Entities.Roster", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
+
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("character varying(200)");
+
+                b.Property<Guid>("TeamId")
+                    .HasColumnType("uuid");
+
+                b.HasKey("Id");
+
+                b.HasIndex("TeamId");
+
+                b.ToTable("Rosters");
+            });
+
+            modelBuilder.Entity("Playbook.Domain.Entities.RosterPlayer", b =>
+            {
+                b.Property<Guid>("RosterId")
+                    .HasColumnType("uuid");
+
+                b.Property<Guid>("PlayerId")
+                    .HasColumnType("uuid");
+
+                b.HasKey("RosterId", "PlayerId");
+
+                b.HasIndex("PlayerId");
+
+                b.ToTable("RosterPlayers");
             });
 
             modelBuilder.Entity("Playbook.Domain.Entities.Team", b =>
@@ -155,6 +199,21 @@ namespace Playbook.Infrastructure.Migrations
                 b.HasKey("Id");
 
                 b.ToTable("Teams");
+            });
+
+            modelBuilder.Entity("Playbook.Domain.Entities.RosterPlayer", b =>
+            {
+                b.HasOne("Playbook.Domain.Entities.Player", "Player")
+                    .WithMany()
+                    .HasForeignKey("PlayerId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.HasOne("Playbook.Domain.Entities.Roster", "Roster")
+                    .WithMany("RosterPlayers")
+                    .HasForeignKey("RosterId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
             });
 
             modelBuilder.Entity("Playbook.Domain.Entities.Video", b =>
@@ -210,8 +269,22 @@ namespace Playbook.Infrastructure.Migrations
 
             modelBuilder.Entity("Playbook.Domain.Entities.Game", b =>
             {
+                b.HasOne("Playbook.Domain.Entities.Roster", "Roster")
+                    .WithMany()
+                    .HasForeignKey("RosterId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 b.HasOne("Playbook.Domain.Entities.Team", "Team")
                     .WithMany("Games")
+                    .HasForeignKey("TeamId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Playbook.Domain.Entities.Roster", b =>
+            {
+                b.HasOne("Playbook.Domain.Entities.Team", "Team")
+                    .WithMany("Rosters")
                     .HasForeignKey("TeamId")
                     .OnDelete(DeleteBehavior.Cascade)
                     .IsRequired();

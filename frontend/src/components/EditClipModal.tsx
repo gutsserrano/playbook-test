@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { formatTime } from "@/lib/formatTime";
 import { Clip } from "@/lib/api";
+import { Modal } from "@/components/ui/Modal";
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
 interface EditClipModalProps {
   clip: Clip;
-  players: { id: string; name: string; number: number }[];
+  players: { id: string; name: string; number?: number | null }[];
   videoDuration: number;
   onClose: () => void;
   onSubmit: (data: { startTimestamp: number; endTimestamp: number; playerId?: string; title: string }) => void;
@@ -41,8 +42,7 @@ export function EditClipModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-turf-800 rounded-xl border border-turf-600 w-full max-w-md p-6 shadow-xl">
+    <Modal onClose={onClose}>
         <h3 className="text-xl font-semibold text-white mb-4">Edit Clip</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -116,7 +116,7 @@ export function EditClipModal({
               <option value="">— Select —</option>
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
-                  #{p.number} {p.name}
+                  {p.number != null ? `#${p.number} ` : ""}{p.name}
                 </option>
               ))}
             </select>
@@ -137,7 +137,6 @@ export function EditClipModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

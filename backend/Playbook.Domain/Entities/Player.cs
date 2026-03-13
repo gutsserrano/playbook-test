@@ -4,7 +4,7 @@ public class Player
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public int Number { get; set; }
+    public int? Number { get; set; }
     public string Position { get; set; } = string.Empty;
     public Guid TeamId { get; set; }
 

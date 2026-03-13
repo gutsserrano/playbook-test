@@ -22,7 +22,7 @@ public class PlayersController : ControllerBase
             query = query.Where(p => p.TeamId == teamId.Value);
 
         var players = await query
-            .OrderBy(p => p.Number)
+            .OrderBy(p => p.Name)
             .Select(p => new PlayerDto(p.Id, p.Name, p.Number, p.Position, p.TeamId))
             .ToListAsync();
         return Ok(players);
@@ -36,6 +36,15 @@ public class PlayersController : ControllerBase
         return Ok(new PlayerDto(player.Id, player.Name, player.Number, player.Position, player.TeamId));
     }
 
+    private static readonly HashSet<string> AllowedPositions = new(StringComparer.OrdinalIgnoreCase)
+        { "Goalkeeper", "Defender", "Midfielder", "Forward", "Other" };
+
+    private static string NormalizePosition(string? position)
+    {
+        if (string.IsNullOrWhiteSpace(position)) return "Other";
+        return AllowedPositions.Contains(position.Trim()) ? position.Trim() : "Other";
+    }
+
     [HttpPost]
     public async Task<ActionResult<PlayerDto>> CreatePlayer([FromBody] CreatePlayerDto dto)
     {
@@ -43,12 +52,35 @@ public class PlayersController : ControllerBase
         {
             Id = Guid.NewGuid(),
             Name = dto.Name,
-            Number = dto.Number,
-            Position = dto.Position,
+            Number = dto.Number is >= 0 and <= 99 ? dto.Number : null,
+            Position = NormalizePosition(dto.Position),
             TeamId = dto.TeamId
         };
         _db.Players.Add(player);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(GetPlayer), new { id = player.Id }, new PlayerDto(player.Id, player.Name, player.Number, player.Position, player.TeamId));
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<PlayerDto>> UpdatePlayer([FromRoute] Guid id, [FromBody] UpdatePlayerDto? dto)
+    {
+        if (dto == null) return BadRequest("Request body is required");
+        var player = await _db.Players.FindAsync(id);
+        if (player == null) return NotFound();
+        player.Name = dto.Name;
+        player.Number = dto.Number is >= 0 and <= 99 ? dto.Number : null;
+        player.Position = NormalizePosition(dto.Position);
+        await _db.SaveChangesAsync();
+        return Ok(new PlayerDto(player.Id, player.Name, player.Number, player.Position, player.TeamId));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeletePlayer(Guid id)
+    {
+        var player = await _db.Players.FindAsync(id);
+        if (player == null) return NotFound();
+        _db.Players.Remove(player);
+        await _db.SaveChangesAsync();
+        return NoContent();
     }
 }

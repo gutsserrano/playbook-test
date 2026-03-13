@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Film, BarChart3 } from "lucide-react";
+import { ArrowLeft, Film, BarChart3, Pencil, Trash2 } from "lucide-react";
 import { api, Clip, Player, PlaysPerPlayer } from "@/lib/api";
+import { EditPlayerModal } from "@/components/EditPlayerModal";
 import { formatTime } from "@/lib/formatTime";
 
 export default function PlayerProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [player, setPlayer] = useState<Player | null>(null);
+  const [showEditPlayer, setShowEditPlayer] = useState(false);
   const [clips, setClips] = useState<Clip[]>([]);
   const [stats, setStats] = useState<PlaysPerPlayer | null>(null);
   const [statsStatFilter, setStatsStatFilter] = useState<string>("all");
@@ -39,27 +42,72 @@ export default function PlayerProfilePage() {
     );
   }
 
+  const onSavePlayer = async (data: { name: string; number?: number | null; position: string }) => {
+    if (!player) return;
+    try {
+      const updated = await api.players.update(player.id, data);
+      setPlayer(updated);
+      setShowEditPlayer(false);
+    } catch (err) {
+      console.error("Failed to update player:", err);
+      alert(`Failed to update player: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const onDeletePlayer = async () => {
+    if (!player) return;
+    if (!confirm(`Delete player "${player.name}"? This will remove them from all rosters.`)) return;
+    await api.players.delete(player.id);
+    router.push("/players");
+  };
+
   return (
     <div className="space-y-8">
-      <Link
-        href="/players"
-        className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5" />
-        Back to Players
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/players"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Players
+        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEditPlayer(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-300 hover:bg-turf-700 hover:text-white transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            Edit
+          </button>
+          <button
+            onClick={onDeletePlayer}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-300 hover:bg-red-900/30 hover:text-red-400 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        </div>
+      </div>
 
       <div className="flex items-start gap-6">
         <div className="w-24 h-24 rounded-full bg-turf-600 flex items-center justify-center text-3xl font-bold text-accent">
-          {player.number}
+          {player.number ?? "—"}
         </div>
         <div>
           <h1 className="text-3xl font-bold text-white">{player.name}</h1>
           <p className="text-slate-400 mt-1">
-            #{player.number} • {player.position}
+            {player.number != null ? `#${player.number} • ` : ""}{player.position}
           </p>
         </div>
       </div>
+
+      {showEditPlayer && player && (
+        <EditPlayerModal
+          player={player}
+          onClose={() => setShowEditPlayer(false)}
+          onSubmit={onSavePlayer}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-turf-800 rounded-xl border border-turf-600 p-6">
